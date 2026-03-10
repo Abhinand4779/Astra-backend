@@ -1,0 +1,14 @@
+fastapi[all]
+motor
+pydantic-settings
+python-jose[cryptography]
+passlib[bcrypt]
+pymongo
+python-multipart
+python-dotenv
+uvicorn
+jinja2
+itsdangerous
+bcrypt
+email-validator
+dnspython
