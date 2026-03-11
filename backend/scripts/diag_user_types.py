@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-async def list_users():
+async def diag_user_types():
     client = AsyncIOMotorClient(
         os.getenv("DATABASE_URL"), 
         tlsCAFile=certifi.where(),
@@ -14,12 +14,13 @@ async def list_users():
     )
     db = client[os.getenv("DATABASE_NAME")]
     
-    print("--- USERS in DATABASE ---")
+    print("Listing user created_at types...")
     cursor = db["users"].find()
     async for user in cursor:
-        print(f"Email: {user.get('email')} | Admin: {user.get('is_admin', False)}")
+        ca = user.get("created_at")
+        print(f"User: {user.get('email')} | created_at: {ca} | type: {type(ca)}")
     
     client.close()
 
 if __name__ == "__main__":
-    asyncio.run(list_users())
+    asyncio.run(diag_user_types())

@@ -30,7 +30,12 @@ app.add_middleware(
 # Database connection
 @app.on_event("startup")
 async def startup_db_client():
-    app.mongodb_client = AsyncIOMotorClient(os.getenv("DATABASE_URL"))
+    import certifi
+    app.mongodb_client = AsyncIOMotorClient(
+        os.getenv("DATABASE_URL"), 
+        tlsCAFile=certifi.where(),
+        tlsAllowInvalidCertificates=True
+    )
     app.mongodb = app.mongodb_client[os.getenv("DATABASE_NAME")]
 
 @app.on_event("shutdown")

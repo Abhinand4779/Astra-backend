@@ -53,37 +53,28 @@ async def show_product(request: Request, id: str):
     raise HTTPException(status_code=404, detail=f"Product {id} not found")
 
 @router.post("/", response_description="Add new product", status_code=status.HTTP_201_CREATED)
-async def create_product(request: Request, product: ProductCreate = Body(...)):
-    product_dict = product.dict()
-    new_product = await request.app.mongodb["products"].insert_one(product_dict)
+async def create_product(request: Request, product: dict = Body(...)):
+    # Simple persistence without strict schema for rapid development
+    new_product = await request.app.mongodb["products"].insert_one(product)
     created_product = await request.app.mongodb["products"].find_one({"_id": new_product.inserted_id})
     created_product["_id"] = str(created_product["_id"])
     return created_product
 
 @router.put("/{id}", response_description="Update a product")
-async def update_product(request: Request, id: str, product: ProductUpdate = Body(...)):
+async def update_product(request: Request, id: str, product: dict = Body(...)):
     if not ObjectId.is_valid(id):
         raise HTTPException(status_code=400, detail="Invalid ID format")
     
-    product_dict = {k: v for k, v in product.dict().items() if v is not None}
+    # Remove _id from body if it exists to avoid MongoDB errors
+    product.pop("_id", None)
     
-    if len(product_dict) >= 1:
-        update_result = await request.app.mongodb["products"].update_one(
-            {"_id": ObjectId(id)}, {"$set": product_dict}
-        )
+    update_result = await request.app.mongodb["products"].update_one(
+        {"_id": ObjectId(id)}, {"$set": product}
+    )
 
-        if update_result.modified_count == 1:
-            if (
-                updated_product := await request.app.mongodb["products"].find_one({"_id": ObjectId(id)})
-            ) is not None:
-                updated_product["_id"] = str(updated_product["_id"])
-                return updated_product
-
-    if (
-        existing_product := await request.app.mongodb["products"].find_one({"_id": ObjectId(id)})
-    ) is not None:
-        existing_product["_id"] = str(existing_product["_id"])
-        return existing_product
+    if (updated_product := await request.app.mongodb["products"].find_one({"_id": ObjectId(id)})) is not None:
+        updated_product["_id"] = str(updated_product["_id"])
+        return updated_product
 
     raise HTTPException(status_code=404, detail=f"Product {id} not found")
 
