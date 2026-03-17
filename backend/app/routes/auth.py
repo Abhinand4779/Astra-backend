@@ -76,11 +76,22 @@ async def read_users_me(current_user: dict = Depends(get_current_user)):
 @router.delete("/user/{user_id}", status_code=status.HTTP_200_OK)
 async def delete_user(user_id: str, request: Request, admin: dict = Depends(get_current_admin_user)):
     from bson import ObjectId
+    
+    if str(admin.get("_id")) == user_id:
+        raise HTTPException(status_code=400, detail="Safety Guard: You cannot delete your own administrator account while logged in.")
+        
     try:
+        # Check if the target is a protected admin
+        target_user = await request.app.mongodb["users"].find_one({"_id": ObjectId(user_id)})
+        if target_user and target_user.get("email") == "admin@astra.in":
+             raise HTTPException(status_code=403, detail="The primary administrator account is protected and cannot be deleted.")
+             
         delete_result = await request.app.mongodb["users"].delete_one({"_id": ObjectId(user_id)})
         if delete_result.deleted_count == 1:
             return {"message": "User deleted successfully"}
         raise HTTPException(status_code=404, detail="User not found")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail="Invalid user ID format or server error")
 
