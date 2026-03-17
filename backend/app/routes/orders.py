@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Body, status, Depends
 from app.schemas.orders import OrderCreate, OrderSchema
 from app.routes.auth import get_current_user, get_current_admin_user
 from app.services.email_service import send_order_confirmation, send_shipping_notification
-from app.services.stripe_service import create_checkout_session
+from app.services.razorpay_service import create_checkout_session
 from typing import List, Optional
 from bson import ObjectId
 import os
@@ -58,18 +58,22 @@ async def create_order(
     # Send Confirmation Email 
     send_order_confirmation(created_order, user_email)
     
-    # Generate Stripe URL (if items present)
+    # Generate Razorpay URL (if items present)
     try:
-        # Convert "₹4,500" or similar to a number for Stripe
+        # Convert "₹4,500" or similar to a number for Razorpay
         numeric_total_str = "".join(filter(str.isdigit, str(order_dict["total_amount"])))
         if numeric_total_str:
             numeric_total = int(numeric_total_str)
-            # Create Stripe session
-            checkout_url = create_checkout_session(created_order["_id"], numeric_total, user_email)
+            customer_name = order_dict.get("shipping_address", {}).get("firstName", "Customer")
+            customer_phone = order_dict.get("shipping_address", {}).get("phone", "")
+            # Create Razorpay payment link
+            checkout_url = create_checkout_session(
+                created_order["_id"], numeric_total, user_email, customer_name, customer_phone
+            )
             if checkout_url:
                 return {"_id": created_order["_id"], "checkout_url": checkout_url}
     except Exception as e:
-        print(f"Stripe Checkout Session Generation Failed: {e}")
+        print(f"Razorpay Checkout Link Generation Failed: {e}")
 
     return created_order
 
