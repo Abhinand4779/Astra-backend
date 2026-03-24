@@ -1,0 +1,39 @@
+services:
+  laravel.test:
+    build:
+      context: ./vendor/laravel/sail/runtimes/8.3
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: '1000'
+    image: sail-8.3/app
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '80:80'
+      - '5173:5173'
+    environment:
+      WWWUSER: '1000'
+      LARAVEL_SAIL: 1
+      XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+      XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+      IGNITION_LOCAL_SITES_PATH: '${PWD}'
+    volumes:
+      - '.:/var/www/html'
+    networks:
+      - sail
+    depends_on:
+      - mongodb
+  mongodb:
+    image: 'mongo:latest'
+    ports:
+      - '27017:27017'
+    volumes:
+      - 'sail-mongodb:/data/db'
+    networks:
+      - sail
+networks:
+  sail:
+    driver: bridge
+volumes:
+  sail-mongodb:
+    driver: local
